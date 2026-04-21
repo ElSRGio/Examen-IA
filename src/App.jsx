@@ -13,6 +13,10 @@ const EMPTY_FORM = {
   imagen: ''
 }
 
+// === DETERMINAR LA IP DEL BACKEND AUTOMÁTICAMENTE ===
+// Si lo abres en localhost, usa localhost. Si lo abres con la IP de la Raspberry, usa esa IP.
+const API_URL = `http://${window.location.hostname}:5000/api/products`;
+
 function normalizeDiscount(value) {
   if (typeof value === 'boolean') return value
 
@@ -69,16 +73,16 @@ function App() {
     [carrito]
   )
 
-  // PLAN C: Cargar datos desde la memoria local del navegador al iniciar
+  // === CARGAR DATOS DESDE MONGODB AL INICIAR ===
   useEffect(() => {
-    const savedData = localStorage.getItem('pos_inventario');
-    if (savedData) {
-      try {
-        setInventario(JSON.parse(savedData));
-      } catch (err) {
-        console.error("Error leyendo localStorage", err);
-      }
-    }
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setInventario(data);
+        }
+      })
+      .catch(err => console.error("Error al cargar la BD de Mongo:", err));
   }, []);
   
   useEffect(() => {
@@ -132,13 +136,11 @@ function App() {
   }
 
   const handleDetectedCode = (rawCode) => {
-    // 1. Si el modal está abierto, IGNORAR la cámara por completo
     if (productoEnEsperaRef.current) return
 
     const code = String(rawCode || '').trim().toUpperCase()
     if (!code) return
 
-    // 2. Bloquear lecturas repetidas del MISMO código en menos de 2.5 segundos
     const now = Date.now()
     if (lastScanRef.current.code === code && now - lastScanRef.current.at < 2500) {
       return
@@ -151,7 +153,6 @@ function App() {
       return
     }
 
-    // 3. Registrar el código válido y abrir el modal SIN pausar el video
     lastScanRef.current = { code, at: now }
     setProductoEnEspera(producto)
     setTiempoRestante(3)
@@ -161,7 +162,6 @@ function App() {
   useEffect(() => {
     if (activeTab !== 'pos') return;
 
-    // Creamos la instancia
     const scanner = new Html5QrcodeScanner('reader', {
       fps: 10,
       aspectRatio: 1,
@@ -170,13 +170,11 @@ function App() {
 
     scannerRef.current = scanner;
 
-    // Renderizamos
     scanner.render(
       (decodedText) => handleDetectedCode(decodedText),
-      () => {} // Ignorar errores de lectura
+      () => {} 
     );
 
-    // ESTO ES LO CRUCIAL: La función de limpieza
     return () => {
       if (scannerRef.current) {
         scannerRef.current.clear().catch(error => {
@@ -189,37 +187,19 @@ function App() {
 
   useEffect(() => {
     let timer = null
-
     if (productoEnEspera && tiempoRestante > 0) {
-      timer = setTimeout(() => {
-        setTiempoRestante((prev) => prev - 1)
-      }, 1000)
+      timer = setTimeout(() => { setTiempoRestante((prev) => prev - 1) }, 1000)
     }
-
-    if (productoEnEspera && tiempoRestante === 0) {
-      confirmarProducto()
-    }
-
-    return () => {
-      if (timer) clearTimeout(timer)
-    }
+    if (productoEnEspera && tiempoRestante === 0) { confirmarProducto() }
+    return () => { if (timer) clearTimeout(timer) }
   }, [productoEnEspera, tiempoRestante])
 
   useEffect(() => {
     const onKeyDown = (event) => {
       if (!productoEnEsperaRef.current) return
-
-      if (event.key === 'Enter') {
-        event.preventDefault()
-        confirmarProducto()
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        cancelarProductoEnEspera()
-      }
+      if (event.key === 'Enter') { event.preventDefault(); confirmarProducto() }
+      if (event.key === 'Escape') { event.preventDefault(); cancelarProductoEnEspera() }
     }
-
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
@@ -255,9 +235,7 @@ function App() {
 
   const handleImageFileChange = (event) => {
     const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     const reader = new FileReader()
     reader.onload = () => {
@@ -267,8 +245,8 @@ function App() {
     reader.readAsDataURL(file)
   }
 
-  // PLAN C: Lógica de guardado 100% Local (Bypass de Docker)
-  const handleSubmitProduct = (event) => {
+  // === GUARDAR EN MONGODB (POST / PUT) ===
+  const handleSubmitProduct = async (event) => {
     event.preventDefault()
 
     const id = formData.id.trim().toUpperCase()
@@ -285,26 +263,37 @@ function App() {
 
     const nextProduct = { id, nombre, descripcion, precio, descuento, imagen }
 
-    if (editingId) {
-      // Actualizar localmente
-      const newData = inventario.map((item) => (item.id === editingId ? { ...item, ...nextProduct } : item))
-      localStorage.setItem('pos_inventario', JSON.stringify(newData))
-      setInventario(newData)
-      setMensaje(`Producto ${id} actualizado (Modo Local).`)
-    } else {
-      // Crear localmente
-      const exists = inventario.some((item) => item.id === id)
-      if (exists) {
-        setMensaje(`El ID ${id} ya existe.`)
-        return
-      }
-      const newData = [...inventario, nextProduct]
-      localStorage.setItem('pos_inventario', JSON.stringify(newData))
-      setInventario(newData)
-      setMensaje(`Producto ${id} guardado (Modo Local).`)
-    }
+    try {
+      const url = editingId ? `${API_URL}/${editingId}` : API_URL;
+      const method = editingId ? 'PUT' : 'POST';
 
-    resetForm()
+      const response = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(nextProduct)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setMensaje(`Error del servidor: ${errorData.message}`);
+        return;
+      }
+
+      const savedProduct = await response.json();
+
+      if (editingId) {
+        setInventario((prev) => prev.map((item) => (item.id === editingId ? savedProduct : item)))
+        setMensaje(`Producto ${id} actualizado en Mongo.`)
+      } else {
+        setInventario((prev) => [...prev, savedProduct])
+        setMensaje(`Producto ${id} guardado en Mongo.`)
+      }
+
+      resetForm()
+    } catch (error) {
+      console.error("Error de red:", error);
+      setMensaje('Error de red. Verifica que los contenedores estén corriendo.');
+    }
   }
 
   const handleEdit = (producto) => {
@@ -319,16 +308,27 @@ function App() {
     })
   }
 
-  // PLAN C: Lógica de borrado 100% Local
-  const handleDelete = (id) => {
-    const newData = inventario.filter((item) => item.id !== id)
-    localStorage.setItem('pos_inventario', JSON.stringify(newData))
-    setInventario(newData)
-    
-    setCarrito((prev) => prev.filter((item) => item.id !== id))
-    if (editingId === id) resetForm()
+  // === ELIMINAR DE MONGODB (DELETE) ===
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE'
+      });
 
-    setMensaje(`Producto ${id} eliminado (Modo Local).`)
+      if (!response.ok) {
+        setMensaje(`Error al eliminar de Mongo.`);
+        return;
+      }
+
+      setInventario((prev) => prev.filter((item) => item.id !== id))
+      setCarrito((prev) => prev.filter((item) => item.id !== id))
+      if (editingId === id) resetForm()
+
+      setMensaje(`Producto ${id} eliminado de Mongo.`)
+    } catch (error) {
+      console.error("Error de red:", error);
+      setMensaje('Error de red al intentar eliminar.');
+    }
   }
 
   const toggleQrSelection = (id) => {
@@ -337,24 +337,16 @@ function App() {
     )
   }
 
-  const selectAllQrs = () => {
-    setSelectedQrIds(inventario.map((item) => item.id))
-  }
-
-  const deselectAllQrs = () => {
-    setSelectedQrIds([])
-  }
+  const selectAllQrs = () => setSelectedQrIds(inventario.map((item) => item.id))
+  const deselectAllQrs = () => setSelectedQrIds([])
 
   const printSelectedQrs = () => {
     if (selectedQrIds.length === 0) {
       setMensaje('Selecciona al menos un producto para imprimir QRs.')
       return
     }
-
     setIsPrintMode(true)
-    setTimeout(() => {
-      window.print()
-    }, 80)
+    setTimeout(() => { window.print() }, 80)
   }
 
   return (
