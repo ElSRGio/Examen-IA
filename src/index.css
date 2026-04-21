@@ -1,3 +1,6 @@
+/* =======================================
+   1. VARIABLES Y BASE (Tu código base)
+   ======================================= */
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -6,28 +9,8 @@
   --code-bg: #f4f3ec;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
+  --bg-card: #ffffff;
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -37,75 +20,249 @@
     --bg: #16171d;
     --border: #2e303a;
     --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+    --bg-card: #1f2028;
   }
 }
 
 body {
   margin: 0;
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  padding: 20px;
   box-sizing: border-box;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* =======================================
+   2. ESTRUCTURA SPA Y PESTAÑAS
+   ======================================= */
+.app-header {
+  text-align: center;
+  margin-bottom: 20px;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 30px;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
+.tab-button {
+  padding: 10px 20px;
+  font-size: 16px;
   background: var(--code-bg);
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-button.is-active, .tab-button:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* =======================================
+   3. VISTA POS (TERMINAL DE VENTA)
+   ======================================= */
+.pos-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.scanner-panel, .cart-panel {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.qr-reader {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 20px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.cart-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cart-total h3 {
+  font-size: 24px;
+  color: var(--text-h);
+}
+
+/* =======================================
+   4. VISTA DE GESTIÓN (CRUD)
+   ======================================= */
+.crud-form-panel, .crud-table-panel {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  margin-bottom: 30px;
+}
+
+/* Corrección estricta del formulario para que no colapse */
+.crud-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.crud-form input, .crud-form textarea {
+  width: 100%;
+  padding: 12px;
+  background: #ffffff; /* Obligamos a fondo blanco */
+  color: #000000;      /* Obligamos a texto negro */
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-family: var(--sans);
+  box-sizing: border-box;
+}
+
+.crud-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.inventory-card {
+  background: var(--code-bg);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.inventory-card img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: white;
+}
+
+/* =======================================
+   5. MODAL FLOTANTE (LOS 3 SEGUNDOS)
+   ======================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.product-preview {
+  background: var(--bg);
+  padding: 30px;
+  border-radius: 16px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  border: 2px solid var(--accent);
+}
+
+.product-preview img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: white;
+}
+
+.modal-countdown {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent);
+  margin: 15px 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* =======================================
+   6. IMPRESIÓN DE QRS (A4 STRICT)
+   ======================================= */
+.qr-print-controls {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.qr-card {
+  border: 1px solid var(--border);
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  background: var(--bg-card);
+}
+
+/* Mágia para la impresora */
+@media print {
+  @page { size: A4; margin: 1cm; }
+  
+  body { background: white; color: black; }
+  
+  /* Ocultamos lo que no sirve para imprimir */
+  .app-header, .tabs, .qr-print-controls { 
+    display: none !important; 
+  }
+  
+  /* Forzamos a 3 columnas exactas en el papel */
+  .qr-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+  
+  .qr-card {
+    border: 1px dashed #ccc !important;
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
 }

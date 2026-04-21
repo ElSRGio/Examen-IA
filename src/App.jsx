@@ -69,6 +69,18 @@ function App() {
     [carrito]
   )
 
+  // PLAN C: Cargar datos desde la memoria local del navegador al iniciar
+  useEffect(() => {
+    const savedData = localStorage.getItem('pos_inventario');
+    if (savedData) {
+      try {
+        setInventario(JSON.parse(savedData));
+      } catch (err) {
+        console.error("Error leyendo localStorage", err);
+      }
+    }
+  }, []);
+  
   useEffect(() => {
     inventarioRef.current = inventario
   }, [inventario])
@@ -87,28 +99,6 @@ function App() {
     return () => window.removeEventListener('afterprint', onAfterPrint)
   }, [])
 
-  const resumeScanner = () => {
-    if (!scannerRef.current) return
-    try {
-      scannerRef.current.resume()
-    } catch {
-      // No-op si el scanner no permite resume en este estado.
-    }
-  }
-
-  const pauseScanner = () => {
-    if (!scannerRef.current) return
-    try {
-      scannerRef.current.pause(true)
-    } catch {
-      try {
-        scannerRef.current.pause()
-      } catch {
-        // No-op si falla en ese estado.
-      }
-    }
-  }
-
   const addProductoToCarrito = (producto) => {
     const precioFinal = precioFinalProducto(producto)
     const ahorro = Number(producto.precio) - precioFinal
@@ -126,75 +116,76 @@ function App() {
 
   const confirmarProducto = () => {
     if (!productoEnEsperaRef.current) return
-
     const producto = productoEnEsperaRef.current
     addProductoToCarrito(producto)
     setProductoEnEspera(null)
     setTiempoRestante(3)
     setMensaje(`${producto.nombre} agregado al carrito.`)
-    resumeScanner()
   }
 
   const cancelarProductoEnEspera = () => {
     if (!productoEnEsperaRef.current) return
-
     const producto = productoEnEsperaRef.current
     setProductoEnEspera(null)
     setTiempoRestante(3)
     setMensaje(`Escaneo cancelado para ${producto.nombre}.`)
-    resumeScanner()
   }
 
   const handleDetectedCode = (rawCode) => {
+    // 1. Si el modal está abierto, IGNORAR la cámara por completo
     if (productoEnEsperaRef.current) return
 
     const code = String(rawCode || '').trim().toUpperCase()
     if (!code) return
 
+    // 2. Bloquear lecturas repetidas del MISMO código en menos de 2.5 segundos
     const now = Date.now()
-    if (lastScanRef.current.code === code && now - lastScanRef.current.at < 1600) {
+    if (lastScanRef.current.code === code && now - lastScanRef.current.at < 2500) {
       return
     }
-
-    lastScanRef.current = { code, at: now }
 
     const producto = inventarioRef.current.find((item) => item.id === code)
 
     if (!producto) {
-      setMensaje(`Codigo no registrado: ${code}`)
+      setMensaje(`Código no registrado: ${code}`)
       return
     }
 
-    pauseScanner()
+    // 3. Registrar el código válido y abrir el modal SIN pausar el video
+    lastScanRef.current = { code, at: now }
     setProductoEnEspera(producto)
     setTiempoRestante(3)
-    setMensaje(`${producto.nombre} detectado. Confirmacion automatica en 3 s.`)
+    setMensaje(`${producto.nombre} detectado. Confirmación en 3 s.`)
   }
 
   useEffect(() => {
-    if (activeTab !== 'pos') {
-      return undefined
-    }
+    if (activeTab !== 'pos') return;
 
+    // Creamos la instancia
     const scanner = new Html5QrcodeScanner('reader', {
       fps: 10,
       aspectRatio: 1,
       qrbox: { width: 250, height: 250 }
-    })
+    });
 
-    scannerRef.current = scanner
+    scannerRef.current = scanner;
+
+    // Renderizamos
     scanner.render(
       (decodedText) => handleDetectedCode(decodedText),
-      () => {}
-    )
+      () => {} // Ignorar errores de lectura
+    );
 
+    // ESTO ES LO CRUCIAL: La función de limpieza
     return () => {
-      scannerRef.current = null
-      scanner
-        .clear()
-        .catch(() => {})
-    }
-  }, [activeTab])
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(error => {
+          console.error("Error limpiando el scanner:", error);
+        });
+        scannerRef.current = null;
+      }
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     let timer = null
@@ -250,7 +241,6 @@ function App() {
     setProductoEnEspera(null)
     setTiempoRestante(3)
     setMensaje('Venta reiniciada. Escanea un QR para iniciar la venta.')
-    resumeScanner()
   }
 
   const resetForm = () => {
@@ -277,6 +267,7 @@ function App() {
     reader.readAsDataURL(file)
   }
 
+  // PLAN C: Lógica de guardado 100% Local (Bypass de Docker)
   const handleSubmitProduct = (event) => {
     event.preventDefault()
 
@@ -288,26 +279,29 @@ function App() {
     const imagen = formData.imagen || '/img/producto-base.svg'
 
     if (!id || !nombre || !Number.isFinite(precio)) {
-      setMensaje('Completa los campos obligatorios de Gestion.')
+      setMensaje('Completa los campos obligatorios.')
       return
     }
 
     const nextProduct = { id, nombre, descripcion, precio, descuento, imagen }
 
     if (editingId) {
-      setInventario((prev) =>
-        prev.map((item) => (item.id === editingId ? { ...item, ...nextProduct } : item))
-      )
-      setMensaje(`Producto ${id} actualizado.`)
+      // Actualizar localmente
+      const newData = inventario.map((item) => (item.id === editingId ? { ...item, ...nextProduct } : item))
+      localStorage.setItem('pos_inventario', JSON.stringify(newData))
+      setInventario(newData)
+      setMensaje(`Producto ${id} actualizado (Modo Local).`)
     } else {
+      // Crear localmente
       const exists = inventario.some((item) => item.id === id)
       if (exists) {
         setMensaje(`El ID ${id} ya existe.`)
         return
       }
-
-      setInventario((prev) => [...prev, nextProduct])
-      setMensaje(`Producto ${id} agregado.`)
+      const newData = [...inventario, nextProduct]
+      localStorage.setItem('pos_inventario', JSON.stringify(newData))
+      setInventario(newData)
+      setMensaje(`Producto ${id} guardado (Modo Local).`)
     }
 
     resetForm()
@@ -325,15 +319,16 @@ function App() {
     })
   }
 
+  // PLAN C: Lógica de borrado 100% Local
   const handleDelete = (id) => {
-    setInventario((prev) => prev.filter((item) => item.id !== id))
+    const newData = inventario.filter((item) => item.id !== id)
+    localStorage.setItem('pos_inventario', JSON.stringify(newData))
+    setInventario(newData)
+    
     setCarrito((prev) => prev.filter((item) => item.id !== id))
+    if (editingId === id) resetForm()
 
-    if (editingId === id) {
-      resetForm()
-    }
-
-    setMensaje(`Producto ${id} eliminado.`)
+    setMensaje(`Producto ${id} eliminado (Modo Local).`)
   }
 
   const toggleQrSelection = (id) => {

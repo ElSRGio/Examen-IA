@@ -9,8 +9,9 @@ const PORT = process.env.PORT || 5000
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/pos_db'
 const CORS_ORIGIN = process.env.CORS_ORIGIN || '*'
 
-app.use(cors({ origin: CORS_ORIGIN === '*' ? true : CORS_ORIGIN }))
-app.use(express.json())
+// Cambia la línea 13 por esto:
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'pos-backend' })

@@ -82,7 +82,23 @@ body {
   border-radius: 12px;
   padding: 1rem;
 }
+.crud-form {
+  display: flex;
+  flex-direction: column; /* Cambia a columna para asegurar espacio */
+  gap: 1rem;
+  background: #1a1a1a;
+  padding: 20px;
+  border-radius: 12px;
+}
 
+.crud-form input, .crud-form textarea {
+  width: 100%;
+  padding: 12px;
+  background: #fff; /* Fondo blanco para que veas lo que escribes */
+  color: #000;
+  border: none;
+  border-radius: 6px;
+}
 #reader {
   max-width: 380px;
   margin-inline: auto;
