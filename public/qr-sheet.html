@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoja de QRs - Sistema POS</title>
+    <style>
+      :root {
+        --paper: #ffffff;
+        --ink: #1f2937;
+        --line: #d1d5db;
+        --accent: #0f766e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--ink);
+        background: #eef2f7;
+      }
+
+      .page {
+        width: min(1000px, 95vw);
+        margin: 1rem auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1rem 1rem 1.25rem;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+      }
+
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.8rem;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+
+      .subtitle {
+        margin: 0.2rem 0 0;
+        color: #4b5563;
+        font-size: 0.93rem;
+      }
+
+      .actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      button {
+        border: none;
+        background: var(--accent);
+        color: #ffffff;
+        padding: 0.55rem 0.9rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      button.secondary {
+        background: #334155;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 0.65rem;
+      }
+
+      .card {
+        border: 1px dashed var(--line);
+        border-radius: 10px;
+        padding: 0.55rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 170px;
+      }
+
+      .code {
+        margin-top: 0.35rem;
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      .name {
+        margin-top: 0.15rem;
+        color: #6b7280;
+        font-size: 0.76rem;
+        text-align: center;
+      }
+
+      .hint {
+        margin-top: 0.9rem;
+        color: #4b5563;
+        font-size: 0.85rem;
+      }
+
+      @media (max-width: 860px) {
+        .grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 560px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media print {
+        body {
+          background: #ffffff;
+        }
+
+        .page {
+          width: 100%;
+          margin: 0;
+          border: none;
+          box-shadow: none;
+          border-radius: 0;
+          padding: 0.4cm;
+        }
+
+        .actions,
+        .hint {
+          display: none;
+        }
+
+        .grid {
+          grid-template-columns: repeat(5, 1fr);
+          gap: 0.5cm;
+        }
+
+        .card {
+          min-height: 4.7cm;
+          page-break-inside: avoid;
+        }
+
+        canvas {
+          width: 3.6cm !important;
+          height: 3.6cm !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="toolbar">
+        <div>
+          <h1 class="title">Hoja de QRs para Pruebas POS</h1>
+          <p class="subtitle">15 identificadores QR basados en IDs de inventario (P01-P15)</p>
+        </div>
+        <div class="actions">
+          <button type="button" onclick="window.print()">Imprimir</button>
+          <button type="button" class="secondary" onclick="downloadPDFHint()">Tip PDF</button>
+        </div>
+      </div>
+
+      <section id="grid" class="grid"></section>
+
+      <p class="hint">
+        Recomendacion: imprimir en tamano real y usar al menos 4 x 4 cm por QR para mejor lectura en ESP32-CAM.
+      </p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+    <script>
+      const productos = [
+        { id: 'P01', nombre: 'Arroz Premium' },
+        { id: 'P02', nombre: 'Aceite Vegetal' },
+        { id: 'P03', nombre: 'Leche Entera' },
+        { id: 'P04', nombre: 'Cereal Maiz' },
+        { id: 'P05', nombre: 'Atun en Agua' },
+        { id: 'P06', nombre: 'Huevo 12 pz' },
+        { id: 'P07', nombre: 'Pan Integral' },
+        { id: 'P08', nombre: 'Frijol Negro' },
+        { id: 'P09', nombre: 'Azucar 1kg' },
+        { id: 'P10', nombre: 'Cafe Soluble' },
+        { id: 'P11', nombre: 'Pasta Dental' },
+        { id: 'P12', nombre: 'Jabon Barra' },
+        { id: 'P13', nombre: 'Shampoo 400ml' },
+        { id: 'P14', nombre: 'Papel Higienico' },
+        { id: 'P15', nombre: 'Detergente 1kg' }
+      ]
+
+      const grid = document.getElementById('grid')
+
+      async function renderQRs() {
+        for (const p of productos) {
+          const card = document.createElement('article')
+          card.className = 'card'
+
+          const qr = document.createElement('canvas')
+          await QRCode.toCanvas(qr, p.id, {
+            width: 220,
+            margin: 1,
+            color: {
+              dark: '#000000',
+              light: '#ffffff'
+            }
+          })
+
+          const code = document.createElement('div')
+          code.className = 'code'
+          code.textContent = p.id
+
+          const name = document.createElement('div')
+          name.className = 'name'
+          name.textContent = p.nombre
+
+          card.appendChild(qr)
+          card.appendChild(code)
+          card.appendChild(name)
+          grid.appendChild(card)
+        }
+      }
+
+      function downloadPDFHint() {
+        alert('Usa Ctrl+P y selecciona Guardar como PDF para exportar la hoja.')
+      }
+
+      renderQRs()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-label="Producto">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#dbeafe" />
+      <stop offset="100%" stop-color="#fef3c7" />
+    </linearGradient>
+  </defs>
+  <rect width="480" height="320" fill="url(#g)" />
+  <rect x="56" y="40" width="368" height="240" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="6" />
+  <path d="M120 196h240" stroke="#64748b" stroke-width="10" stroke-linecap="round" />
+  <circle cx="156" cy="132" r="30" fill="#94a3b8" />
+  <text x="240" y="140" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#1e293b">Producto</text>
+  <text x="240" y="230" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" fill="#475569">Imagen de referencia</text>
+</svg>
