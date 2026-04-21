@@ -15,7 +15,8 @@ const EMPTY_FORM = {
 
 // === DETERMINAR LA IP DEL BACKEND AUTOMÁTICAMENTE ===
 // Si lo abres en localhost, usa localhost. Si lo abres con la IP de la Raspberry, usa esa IP.
-const API_URL = `http://${window.location.hostname}:5000/api/products`;
+// App.jsx - Línea 17 aprox.
+const API_URL = `http://192.168.137.96:5000/api/products`;
 
 function normalizeDiscount(value) {
   if (typeof value === 'boolean') return value
